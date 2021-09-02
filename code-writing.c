@@ -5,6 +5,10 @@
 //lookup tables for getting index which correlates to the use_index
 static const uint8_t lookup_table[] = "\0\0\0\0abcdefghijklmnopqrstuvwxyz1234567890\n\0\0\t -=[]\\#;'`,./";
 static const uint8_t shift_table[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"£$%%^&*()\0\0\0\0\0_+{}|~:@¬<>?";
+#define CTRL 0b00000001
+#define SHFT 0b00000010
+#define ALT 0b00000100
+#define GUI 0b00001000
 
 //the key has to be released after every press if normal keys
 void release_key()
@@ -17,7 +21,37 @@ void release_key()
     return;
 }
 
-//press the windows key + any other
+//get the selector id for a character (lower as shift requires modifier)
+uint8_t get_selector_val(character)
+{
+    uint8_t index;
+    for (index = 0; index < sizeof(lookup_table); index++) //read thru lookup table for lower (non shift) chars
+    {
+        if (lookup_table[index] == character)
+        {
+            return index;
+        }
+    }
+    return 255;
+}
+
+void hold_key(uint8_t keys_held[])
+{
+    uint8_t tmp_key[5];
+    uint8_t 
+    for (int x = 0; x < strlen(keys_held); x++)
+    {
+        tmp_key[x] +=
+        if(keys_held[x] == ' ' || keys_held[x]  == '\0')
+        {
+
+        }
+    }
+    return;
+}
+
+/*
+//press the windows key + any other (this code will be removed)
 void win_key(uint8_t other_key)
 {
     uint8_t winArr[] = "\x08\0\0\0\0\0\0\0"; //code sent
@@ -28,12 +62,13 @@ void win_key(uint8_t other_key)
     release_key();
     return;
 }
+*/
 
 //put correct values into the array being sent to the target
 void get_array(uint8_t character, uint8_t charArr[])
 {
     uint8_t index;
-    for (index = 0; index < sizeof(lookup_table); index++)
+    for (index = 0; index < sizeof(lookup_table); index++) //read thru lookup table for lower (non shift) chars
     {
         if (lookup_table[index] == character)
         {
@@ -41,7 +76,7 @@ void get_array(uint8_t character, uint8_t charArr[])
             return;
         }
     }
-    for (index = 0; index < sizeof(shift_table); index++)
+    for (index = 0; index < sizeof(shift_table); index++) //read through lookup table for upper (shift) chars
     {
         if (shift_table[index] == character)
         {
@@ -80,6 +115,5 @@ void write_string(char strIn[])
 int main()
 {
     write_string("yes sir");
-    win_key('r');
     return 0;
 }
