@@ -1,33 +1,41 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include <assert.h>
+#include <stdlib.h>
 
 //lookup tables for getting index which correlates to the use_index
-static const uint8_t lookup_table[] = "\0\0\0\0abcdefghijklmnopqrstuvwxyz1234567890\n\0\0\t -=[]\\#;'`,./";
-static const uint8_t shift_table[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"£$%%^&*()\0\0\0\0\0_+{}|~:@¬<>?";
+static const uint8_t g_lookupTable[] = "\0\0\0\0abcdefghijklmnopqrstuvwxyz1234567890\n\0\0\t -=[]\\#;'`,./";
+static const uint8_t g_shiftTable[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"£$%%^&*()\0\0\0\0\0_+{}|~:@¬<>?";
 #define CTRL 0b00000001
 #define SHFT 0b00000010
 #define ALT 0b00000100
 #define GUI 0b00001000
 
-//the key has to be released after every press if normal keys
-void release_key()
+void send_code(uint8_t hidCode[9])
 {
-    uint8_t nullArr[] = "\0\0\0\0\0\0\0\0"; //code sent
     FILE *fp;
     fp = fopen("/dev/hidg0", "wb"); //writes to file which is what's "sent" to pc
-    fwrite(nullArr, 8, 1, fp);
+    fwrite(hidCode, 8, 1, fp);
     fclose(fp);
     return;
 }
 
+//the key has to be released after every press if normal keys
+void release_key()
+{
+    uint8_t nullArr[9] = "\0\0\0\0\0\0\0\0"; //code sent
+    send_code(nullArr);
+    return;
+}
+
 //get the selector id for a character (lower as shift requires modifier)
-uint8_t get_selector_val(character)
+uint8_t get_selector_val(uint8_t character)
 {
     uint8_t index;
-    for (index = 0; index < sizeof(lookup_table); index++) //read thru lookup table for lower (non shift) chars
+    for (index = 0; index < sizeof(g_lookupTable); index++) //read thru lookup table for lower (non shift) chars
     {
-        if (lookup_table[index] == character)
+        if (g_lookupTable[index] == character)
         {
             return index;
         }
@@ -35,53 +43,70 @@ uint8_t get_selector_val(character)
     return 255;
 }
 
-void hold_key(uint8_t keys_held[])
+//iterates through the string given, applying relevant operations on the HID code depending on what keys are passed in
+void hold_keys(uint8_t keysHeld[])
 {
     uint8_t tmp_key[5];
-    uint8_t 
-    for (int x = 0; x < strlen(keys_held); x++)
+    uint8_t char_count = 0;
+    uint8_t selector_val = 0;
+    uint8_t hidCode[9] = "\0\0\0\0\0\0\0\0";
+    for (int x = 0; x < strlen(keysHeld); x++) //iterate through given string
     {
-        tmp_key[x] +=
-        if(keys_held[x] == ' ' || keys_held[x]  == '\0')
+        if(keysHeld[x] == ' ' || keysHeld[x]  == '\0') //delimited by spaces - so once finds space or \0 then record the key and does operation
         {
-
+            char_count = 0;
+            x++;
+            if (tmp_key == "CTRL") //if string matches one of these codes, perform bitwise or to add modifier bit to the modifier value in hidCode
+            {
+                hidCode[0] | CTRL;
+            }
+            else if (tmp_key == "SHFT")
+            {
+                hidCode[0] | SHFT;
+            }
+            else if (tmp_key == "ALT")
+            {
+                hidCode[0] | ALT;
+            }
+            else if (tmp_key == "GUI")
+            {
+                hidCode[0] | GUI;
+            }
+            else
+            {
+                selector_val = get_selector_val(tmp_key); //get the selector val for any keys entered - in current condition only one specifier keypress can be done at any one time
+                if (selector_val == 255)
+                {
+                    printf("There was an incorrect string (%s) sent to the hold_keys function, exiting...", tmp_key);
+                    exit(1);
+                }
+                hidCode[2] = selector_val;
+            }
         }
+        tmp_key[char_count++] = keysHeld[x];
     }
+    send_code(hidCode);
     return;
 }
-
-/*
-//press the windows key + any other (this code will be removed)
-void win_key(uint8_t other_key)
-{
-    uint8_t winArr[] = "\x08\0\0\0\0\0\0\0"; //code sent
-    FILE *fp;
-    fp = fopen("/dev/hidg0", "wb"); //writes to file which is what's "sent" to pc
-    fwrite(winArr, 8, 1, fp);
-    fclose(fp);
-    release_key();
-    return;
-}
-*/
 
 //put correct values into the array being sent to the target
-void get_array(uint8_t character, uint8_t charArr[])
+void get_array(uint8_t character, uint8_t hidCode[])
 {
     uint8_t index;
-    for (index = 0; index < sizeof(lookup_table); index++) //read thru lookup table for lower (non shift) chars
+    for (index = 0; index < sizeof(g_lookupTable); index++) //read thru lookup table for lower (non shift) chars
     {
-        if (lookup_table[index] == character)
+        if (g_lookupTable[index] == character)
         {
-            charArr[2] = index;
+            hidCode[2] = index;
             return;
         }
     }
-    for (index = 0; index < sizeof(shift_table); index++) //read through lookup table for upper (shift) chars
+    for (index = 0; index < sizeof(g_shiftTable); index++) //read through lookup table for upper (shift) chars
     {
-        if (shift_table[index] == character)
+        if (g_shiftTable[index] == character)
         {
-            charArr[0] = 32;
-            charArr[2] = index;
+            hidCode[0] = 32;
+            hidCode[2] = index;
             return;
         }
     }
@@ -91,13 +116,9 @@ void get_array(uint8_t character, uint8_t charArr[])
 //write a single character into hidg0
 void write_character(uint8_t character)
 {
-    uint8_t lookup_index;
-    uint8_t charArr[] = "\0\0\0\0\0\0\0\0";
-    get_array(character, charArr);
-    FILE *fp;
-    fp = fopen("/dev/hidg0", "wb");
-    fwrite(charArr, 8, 1, fp);
-    fclose(fp);
+    uint8_t hidCode[9] = "\0\0\0\0\0\0\0\0";
+    get_array(character, hidCode);
+    send_code(hidCode);
     release_key();
     return;
 }
@@ -115,5 +136,6 @@ void write_string(char strIn[])
 int main()
 {
     write_string("yes sir");
+    hold_keys("ALT \t");
     return 0;
 }
