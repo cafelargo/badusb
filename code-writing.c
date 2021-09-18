@@ -5,8 +5,8 @@
 #include <time.h>
 
 //lookup tables for getting index which correlates to the use_index
-static const uint8_t g_lookupTable[] = "\0\0\0\0abcdefghijklmnopqrstuvwxyz1234567890\r\x1b\x7f\t -=[]\\#;'`,./";
-static const uint8_t g_shiftTable[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"\x9c$\x25^&*()\n\0\b\0\0_+{}|~:@\xaa<>?";
+static const char g_lookupTable[] = "\0\0\0\0abcdefghijklmnopqrstuvwxyz1234567890\r\x1b\x7f\t -=[]\\#;'`,./";
+static const char g_shiftTable[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"\x9c$\x25^&*()\n\0\b\0\0_+{}|~:@\xaa<>?";
 #define CTRL 0b00000001
 #define SHFT 0b00000010
 #define ALT 0b00000100
@@ -14,7 +14,7 @@ static const uint8_t g_shiftTable[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"\x9c
 #define ESC 0x1b
 #define DEL 0x7f
 
-//modified code taken from https://c-for-dummies.com/blog/?p=69 to wait for x number of milliseconds
+
 void delay(long milliseconds)
 {
     time_t seconds = milliseconds / 1000;
@@ -23,7 +23,7 @@ void delay(long milliseconds)
     return;
 }
 
-void send_code(uint8_t hidCode[9])
+void send_code(char hidCode[9])
 {
     for (int i = 0; i < 8; i++)
     {
@@ -40,15 +40,15 @@ void send_code(uint8_t hidCode[9])
 //the key has to be released after every press if normal keys
 void release_key()
 {
-    uint8_t nullArr[9] = "\0\0\0\0\0\0\0\0"; //code sent
+    char nullArr[9] = "\0\0\0\0\0\0\0\0"; //code sent
     send_code(nullArr);
     return;
 }
 
 //get the selector id for a character (lower as shift requires modifier)
-uint8_t get_selector_val(uint8_t character)
+char get_selector_val(char character)
 {
-    uint8_t index;
+    char index;
     for (index = 0; index < sizeof(g_lookupTable); index++) //read thru lookup table for lower (non shift) chars
     {
         if (g_lookupTable[index] == character)
@@ -60,13 +60,13 @@ uint8_t get_selector_val(uint8_t character)
 }
 
 //iterates through the string given, applying relevant operations on the HID code depending on what keys are passed in
-void hold_keys(uint8_t keysHeld[])
+void hold_keys(char keysHeld[])
 {
-    uint8_t tmp_key[5] = "\0\0\0\0\0";
-    uint8_t char_count = 0;
-    uint8_t selector_val = 0;
-    uint8_t hidCode[9] = "\0\0\0\0\0\0\0\0";
-    uint8_t currentChar;
+    char tmp_key[5] = "\0\0\0\0\0";
+    char char_count = 0;
+    char selector_val = 0;
+    char hidCode[9] = "\0\0\0\0\0\0\0\0";
+    char currentChar;
     for (int x = 0; x <= strlen(keysHeld); x++) //iterate through given string
     {
         currentChar = keysHeld[x];
@@ -116,9 +116,9 @@ void hold_keys(uint8_t keysHeld[])
 }
 
 //put correct values into the array being sent to the target
-void get_array(uint8_t character, uint8_t hidCode[])
+void get_array(char character, char hidCode[])
 {
-    uint8_t index;
+    char index;
     for (index = 0; index < sizeof(g_lookupTable); index++) //read thru lookup table for lower (non shift) chars
     {
         if (g_lookupTable[index] == character)
@@ -140,9 +140,9 @@ void get_array(uint8_t character, uint8_t hidCode[])
 }
 
 //write a single character into hidg0
-void write_character(uint8_t character)
+void write_character(char character)
 {
-    uint8_t hidCode[9] = "\0\0\0\0\0\0\0\0";
+    char hidCode[9] = "\0\0\0\0\0\0\0\0";
     get_array(character, hidCode);
     send_code(hidCode);
     release_key();
