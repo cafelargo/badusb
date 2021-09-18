@@ -163,7 +163,7 @@ int main()
 {
     hold_keys("GUI r");
     release_key();
-    delay(500);
+    delay(700);
     write_string("https://www.youtube.com/watch?v=dQw4w9WgXcQ\n");
     return 0;
 }
