@@ -2,7 +2,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <time.h>
 
 //lookup tables for getting index which correlates to the use_index
 static const uint8_t g_lookupTable[] = "\0\0\0\0abcdefghijklmnopqrstuvwxyz1234567890\r\x1b\x7f\t -=[]\\#;'`,./";
@@ -15,9 +15,11 @@ static const uint8_t g_shiftTable[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"\x9c
 #define DEL 0x7f
 
 //modified code taken from https://c-for-dummies.com/blog/?p=69 to wait for x number of milliseconds
-void delay(useconds_t milliseconds)
+void delay(long milliseconds)
 {
-    usleep(milliseconds * 1000);
+    time_t seconds = milliseconds / 1000;
+    long nanoseconds = milliseconds * 1000000;
+    nanosleep(seconds, nanoseconds);
     return;
 }
 
