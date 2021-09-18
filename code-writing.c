@@ -4,10 +4,11 @@
 #include <stdlib.h>
 #include <time.h>
 
-//lookup tables for getting index which correlates to the use_index
+// lookup tables for getting index which correlates to the use_index
 static const uint8_t g_lookupTable[] = "\0\0\0\0abcdefghijklmnopqrstuvwxyz1234567890\r\x1b\x7f\t -=[]\\#;'`,./";
 static const uint8_t g_shiftTable[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"\x9c$\x25^&*()\n\0\b\0\0_+{}|~:@\xaa<>?";
 
+// data structure to map modifier values to their names
 enum ModifierKey
 {
     NONE = 0,
@@ -17,6 +18,7 @@ enum ModifierKey
     GUI = 1 << 3,
 };
 
+// gets the modifier value from an inputted array (the name of the key)
 static enum ModifierKey get_modifier(const uint8_t* input, size_t len)
 {
     if (len != 5) { return NONE; }
@@ -38,6 +40,7 @@ static enum ModifierKey get_modifier(const uint8_t* input, size_t len)
     return (enum ModifierKey) mask;
 }
 
+// pause program for x milliseconds using nanosleep
 static void delay(long milliseconds)
 {
     struct timespec waitTime;
@@ -46,6 +49,7 @@ static void delay(long milliseconds)
     while (-1 == nanosleep(&waitTime, &waitTime));
 }
 
+//writes the hidcode to /dev/hidg0 so that pi keyboard writes it
 static void send_code(uint8_t hidCode[9])
 {
     for (int i = 0; i < 8; i++)
