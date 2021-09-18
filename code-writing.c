@@ -5,8 +5,8 @@
 #include <time.h>
 
 //lookup tables for getting index which correlates to the use_index
-static const char g_lookupTable[] = "\0\0\0\0abcdefghijklmnopqrstuvwxyz1234567890\r\x1b\x7f\t -=[]\\#;'`,./";
-static const char g_shiftTable[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"\x9c$\x25^&*()\n\0\b\0\0_+{}|~:@\xaa<>?";
+static const uint8_t g_lookupTable[] = "\0\0\0\0abcdefghijklmnopqrstuvwxyz1234567890\r\x1b\x7f\t -=[]\\#;'`,./";
+static const uint8_t g_shiftTable[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"\x9c$\x25^&*()\n\0\b\0\0_+{}|~:@\xaa<>?";
 #define CTRL 0b00000001
 #define SHFT 0b00000010
 #define ALT 0b00000100
@@ -14,16 +14,17 @@ static const char g_shiftTable[] = "\0\0\0\0ABCDEFGHIJKLMNOPQRSTUVWXYZ!\"\x9c$\x
 #define ESC 0x1b
 #define DEL 0x7f
 
-
+//wait for x number of milliseconds using nanosleep
 void delay(long milliseconds)
 {
-    time_t seconds = milliseconds / 1000;
-    long nanoseconds = milliseconds * 1000000;
-    nanosleep(seconds, nanoseconds);
+    struct timespec waitTime;
+    waitTime.tv_sec = milliseconds / 1000;
+    waitTime.tv_nsec = (milliseconds % 1000) * 1000000;
+    nanosleep(&waitTime, &waitTime);
     return;
 }
 
-void send_code(char hidCode[9])
+void send_code(uint8_t hidCode[9])
 {
     for (int i = 0; i < 8; i++)
     {
@@ -40,16 +41,16 @@ void send_code(char hidCode[9])
 //the key has to be released after every press if normal keys
 void release_key()
 {
-    char nullArr[9] = "\0\0\0\0\0\0\0\0"; //code sent
+    uint8_t nullArr[9] = "\0\0\0\0\0\0\0\0"; //code sent
     send_code(nullArr);
     return;
 }
 
 //get the selector id for a character (lower as shift requires modifier)
-char get_selector_val(char character)
+uint8_t get_selector_val(uint8_t character)
 {
-    char index;
-    for (index = 0; index < sizeof(g_lookupTable); index++) //read thru lookup table for lower (non shift) chars
+    uint8_t index;
+    for (index = 0; index < sizeof(g_lookupTable); index++) //read thru lookup table for lower (non shift) uint8_ts
     {
         if (g_lookupTable[index] == character)
         {
@@ -60,34 +61,34 @@ char get_selector_val(char character)
 }
 
 //iterates through the string given, applying relevant operations on the HID code depending on what keys are passed in
-void hold_keys(char keysHeld[])
+void hold_keys(uint8_t keysHeld[])
 {
-    char tmp_key[5] = "\0\0\0\0\0";
-    char char_count = 0;
-    char selector_val = 0;
-    char hidCode[9] = "\0\0\0\0\0\0\0\0";
-    char currentChar;
+    uint8_t tmp_key[5] = "\0\0\0\0\0";
+    uint8_t uint8_t_count = 0;
+    uint8_t selector_val = 0;
+    uint8_t hidCode[9] = "\0\0\0\0\0\0\0\0";
+    uint8_t currentChar;
     for (int x = 0; x <= strlen(keysHeld); x++) //iterate through given string
     {
         currentChar = keysHeld[x];
         if(currentChar == ' ' || currentChar  == '\0') //delimited by spaces - so once finds space or \0 then record the key and does operation
         {
-            char_count = 0;
+            uint8_t_count = 0;
             if (strcmp(tmp_key, "CTRL") == 0) //if string matches one of these codes, perform bitwise or to add modifier bit to the modifier value in hidCode
             {
-                hidCode[0] = hidCode[0] | CTRL;
+                hidCode[0] |= CTRL;
             }
             else if (strcmp(tmp_key, "SHFT") == 0)
             {
-                hidCode[0] = hidCode[0] | SHFT;
+                hidCode[0] |= SHFT;
             }
             else if (strcmp(tmp_key, "ALT") == 0)
             {
-                hidCode[0] = hidCode[0] | ALT;
+                hidCode[0] |= ALT;
             }
             else if (strcmp(tmp_key, "GUI") == 0)
             {
-                hidCode[0] = hidCode[0] | GUI;
+                hidCode[0] |= GUI;
             }
             else
             {
@@ -109,17 +110,17 @@ void hold_keys(char keysHeld[])
             }
             x++;
         }
-        tmp_key[char_count++] = keysHeld[x];
+        tmp_key[uint8_t_count++] = keysHeld[x];
     }
     send_code(hidCode);
     return;
 }
 
 //put correct values into the array being sent to the target
-void get_array(char character, char hidCode[])
+void get_array(uint8_t character, uint8_t hidCode[])
 {
-    char index;
-    for (index = 0; index < sizeof(g_lookupTable); index++) //read thru lookup table for lower (non shift) chars
+    uint8_t index;
+    for (index = 0; index < sizeof(g_lookupTable); index++) //read thru lookup table for lower (non shift) uint8_ts
     {
         if (g_lookupTable[index] == character)
         {
@@ -127,7 +128,7 @@ void get_array(char character, char hidCode[])
             return;
         }
     }
-    for (index = 0; index < sizeof(g_shiftTable); index++) //read through lookup table for upper (shift) chars
+    for (index = 0; index < sizeof(g_shiftTable); index++) //read through lookup table for upper (shift) uint8_ts
     {
         if (g_shiftTable[index] == character)
         {
@@ -142,7 +143,7 @@ void get_array(char character, char hidCode[])
 //write a single character into hidg0
 void write_character(char character)
 {
-    char hidCode[9] = "\0\0\0\0\0\0\0\0";
+    uint8_t hidCode[9] = "\0\0\0\0\0\0\0\0";
     get_array(character, hidCode);
     send_code(hidCode);
     release_key();
@@ -150,9 +151,9 @@ void write_character(char character)
 }
 
 //iterate through a string and write each letter into hidg0
-void write_string(char strIn[])
+void write_string(uint8_t strIn[])
 {
-    for (int i; i < strlen(strIn); i++)
+    for (int i = 0; i < strlen(strIn); i++)
     {
         write_character(strIn[i]);
     }
@@ -161,9 +162,12 @@ void write_string(char strIn[])
 
 int main()
 {
+    delay(100);
     hold_keys("GUI r");
     release_key();
-    delay(700);
-    write_string("https://www.youtube.com/watch?v=dQw4w9WgXcQ\n");
+    delay(500);
+    write_string("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    delay(50);
+    write_character('\n');
     return 0;
 }
