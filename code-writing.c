@@ -21,13 +21,30 @@ enum ModifierKey
 // gets the modifier value from an inputted array (the name of the key)
 static enum ModifierKey get_modifier(const uint8_t* input, size_t len)
 {
-    if (len != 5) { return NONE; }
-    uint8_t modifiers[4][5] =    {
+    //if (len != 5) { return NONE; }
+    uint8_t modifiers[4][5] = {
             "CTRL", // 1 << 0 = 1
             "SHFT", // 1 << 1 = 2
             "ALT\0", // 1 << 2 = 4
             "GUI\0", // 1 << 3 = 8
     };
+    uint8_t mask = NONE;
+    int cmpCount = 0;
+    for (int i = 0; i < 4; i++) //compate input to modifiers and create mask based on which input it is
+    {
+        for (int j = 0; j < 5; j++)
+        {
+            if (input[i] == modifiers[i][j])
+            {
+                if (++cmpCount == 5)
+                {
+                    mask = 1 << j;
+                }
+            }
+        }
+    }
+    /*
+    //I really don't like this bit of code / understand it
     uint8_t mask = NONE | CTRL | SHIFT | ALT | GUI;
     for (uint8_t i = 0; i < 5; i++)
     {
@@ -36,6 +53,7 @@ static enum ModifierKey get_modifier(const uint8_t* input, size_t len)
             mask &= ~((input[i] != modifiers[j][i]) << j);
         }
     }
+    */
     // Must be a single flag because there are no equal strings
     return (enum ModifierKey) mask;
 }
@@ -46,7 +64,8 @@ static void delay(long milliseconds)
     struct timespec waitTime;
     waitTime.tv_sec = milliseconds / 1000;
     waitTime.tv_nsec = (milliseconds % 1000) * 1000000;
-    while (-1 == nanosleep(&waitTime, &waitTime));
+    while (-1 == nanosleep(&waitTime, &waitTime)); //nanosleep returns -1 on interrupt, so if an interrupt occurs, nanosleep resumes
+    return;
 }
 
 //writes the hidcode to /dev/hidg0 so that pi keyboard writes it
@@ -67,6 +86,7 @@ static void send_code(uint8_t hidCode[9])
     }
     fwrite(hidCode, 8, 1, fp);
     fclose(fp);
+    return;
 }
 
 /// the key has to be released after every press if normal keys
@@ -74,6 +94,7 @@ static void release_key()
 {
     uint8_t nullArr[9] = "\0\0\0\0\0\0\0\0"; //code sent
     send_code(nullArr);
+    return;
 }
 
 /// get the selector id for a character (lower as shift requires modifier)
@@ -94,7 +115,7 @@ static uint8_t get_selector_val(uint8_t character)
 /// iterates through the string given, applying relevant operations on the HID code depending on what keys are passed in
 static void hold_keys(char keysHeld[])
 {
-    uint8_t tmp_key[5] = "\0\0\0\0\0";
+    uint8_t tmp_key[5] = "\0\0\0\0";
     uint8_t char_count = 0;
     uint8_t hidCode[9] = "\0\0\0\0\0\0\0\0";
     //iterate through given string
@@ -123,13 +144,14 @@ static void hold_keys(char keysHeld[])
                 }
                 hidCode[2] = selector_val;
             }
+            //zero out the tmp_key
             for (int i = 0; i < 5; i++)
             {
                 tmp_key[i] = '\0';
             }
             x++;
         }
-        tmp_key[char_count++] = (uint8_t)keysHeld[x];
+        tmp_key[char_count++] = (uint8_t) keysHeld[x];
     }
     send_code(hidCode);
 }
@@ -166,6 +188,7 @@ static void write_character(char character)
     get_array(character, hidCode);
     send_code(hidCode);
     release_key();
+    return;
 }
 
 //iterate through a string and write each letter into hidg0
@@ -175,6 +198,7 @@ static void write_string(char strIn[])
     {
         write_character(strIn[i]);
     }
+    return;
 }
 
 int main()
